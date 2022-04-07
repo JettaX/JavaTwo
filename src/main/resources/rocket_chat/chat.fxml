@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox alignment="CENTER" spacing="20.0" style="-fx-background-color: #1D1D1D;"
+      xmlns="http://javafx.com/javafx/11.0.14-internal" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="rocket_chat.Controller">
+	<TextArea fx:id="chatWindow" editable="false" focusTraversable="false" prefWidth="478.0"
+	          style="-fx-background-color: #2D2D2D;-fx-highlight-fill: Gray;-fx-text-fill: White;-fx-control-inner-background: #2D2D2D;"
+	          wrapText="true" VBox.vgrow="ALWAYS">
+		<font>
+			<Font name="Droid Sans" size="16.0"/>
+		</font>
+		<opaqueInsets>
+			<Insets/>
+		</opaqueInsets>
+	</TextArea>
+	<HBox>
+		<TextField fx:id="inputField" onKeyPressed="#keyListener" prefHeight="50" promptText="write message..."
+		           style="-fx-background-color: #2D2D2D;-fx-highlight-fill: Gray;-fx-text-fill: White;"
+		           HBox.hgrow="ALWAYS">
+
+			<font>
+				<Font name="Droid Sans" size="16.0"/>
+			</font>
+			<cursor>
+				<Cursor fx:constant="TEXT"/>
+			</cursor>
+		</TextField>
+		<Button fx:id="sendButton" onAction="#sendMessageListener" prefHeight="50"
+		        style="-fx-background-color: #AB3334;" text="Send" textFill="WHITE">
+			<font>
+				<Font name="Droid Sans" size="16.0"/>
+			</font>
+			<cursor>
+				<Cursor fx:constant="HAND"/>
+			</cursor>
+		</Button>
+	</HBox>
+</VBox>
