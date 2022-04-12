@@ -3,6 +3,7 @@ module com.example.chatonjavafx {
     requires javafx.fxml;
 
     requires org.kordamp.bootstrapfx.core;
+    requires lombok;
 
     opens rocket_chat to javafx.fxml;
     exports rocket_chat;
