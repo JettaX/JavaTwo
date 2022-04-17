@@ -10,7 +10,7 @@
       spacing="20"
       stylesheets="@styles/common.css">
 
-	<Label text="Error"/>
+	<Label fx:id="errorLabel" text="Error"/>
 	<Button fx:id="okButton"
 	        text="Back"
 	        onAction="#handleOkButton"/>

@@ -15,6 +15,7 @@
       spacing="20"
       stylesheets="@styles/common.css, @styles/login.css">
 	<TextField fx:id="inputLogin" promptText="login"/>
+	<PasswordField fx:id="inputPassword" promptText="password"/>
 	<Button fx:id="loginButton"
 	        text="Login"
 	        onAction="#loginButtonAction"/>
