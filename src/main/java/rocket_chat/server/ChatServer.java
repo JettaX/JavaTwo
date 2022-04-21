@@ -40,9 +40,9 @@ public class ChatServer implements TCPConnectionListener {
     }
 
     @Override
-    public synchronized void onConnected(TCPConnection tcpConnection, String fromTo) {
-        connections.put(fromTo, tcpConnection);
-        checkQueues(fromTo);
+    public synchronized void onConnected(TCPConnection tcpConnection, String login) {
+        connections.put(login, tcpConnection);
+        checkQueues(login);
         logger.log(java.util.logging.Level.INFO, "Client connected");
     }
 
@@ -52,8 +52,8 @@ public class ChatServer implements TCPConnectionListener {
     }
 
     @Override
-    public synchronized void onDisconnect(TCPConnection tcpConnection, String fromTo) {
-        connections.remove(fromTo);
+    public synchronized void onDisconnect(TCPConnection tcpConnection, String login) {
+        connections.remove(login);
         logger.log(java.util.logging.Level.INFO, "Client disconnected");
     }
 
@@ -65,7 +65,7 @@ public class ChatServer implements TCPConnectionListener {
     private void sendMessage(String message) {
         Message mess = parseMessage(message);
 
-        String connectionId = mess.getUserNameTo().concat(":").concat(mess.getUserNameFrom());
+        String connectionId = mess.getUserNameTo();
 
         if (connections.containsKey(connectionId)) {
             connections.get(connectionId).sendMessage(message);
@@ -75,7 +75,7 @@ public class ChatServer implements TCPConnectionListener {
     }
 
     private void addMessageInQueue(String gsonMessage, Message message) {
-        String connectionId = message.getUserNameTo().concat(":").concat(message.getUserNameFrom());
+        String connectionId = message.getUserNameTo();
         if (queues.containsKey(connectionId)) {
             Queue<String> queue = queues.get(connectionId);
             queue.add(gsonMessage);
@@ -86,11 +86,11 @@ public class ChatServer implements TCPConnectionListener {
         }
     }
 
-    private void checkQueues(String fromTo) {
-        if (queues.containsKey(fromTo)) {
-            Queue<String> queue = queues.get(fromTo);
+    private void checkQueues(String login) {
+        if (queues.containsKey(login)) {
+            Queue<String> queue = queues.get(login);
             while (!queue.isEmpty()) {
-                connections.get(fromTo).sendMessage(queue.poll());
+                connections.get(login).sendMessage(queue.poll());
             }
         }
     }

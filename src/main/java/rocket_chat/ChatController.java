@@ -86,7 +86,7 @@ public class ChatController {
                 inputField.getText());
 
         try {
-            connections.get(message.getUserNameFrom(), message.getUserNameTo()).sendMessage(new ObjectMapper()
+            connections.get().sendMessage(new ObjectMapper()
                     .writeValueAsString(message));
         } catch (JsonProcessingException e) {
             logger.log(Level.WARNING, "Cant parse message");

@@ -92,7 +92,7 @@ public class Main extends Application {
 
     private void createConnection() throws InterruptedException {
         if (!isServerConnected && user != null) {
-            new TcpListener(this, user);
+            new TcpListener(this);
         } else {
             Thread.sleep(5000);
         }

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
 import rocket_chat.entity.Message;
-import rocket_chat.entity.User;
 import rocket_chat.network.TCPConnection;
 import rocket_chat.network.TCPConnectionListener;
 import rocket_chat.repository.ChatRepository;
@@ -22,10 +21,8 @@ public class TcpListener implements TCPConnectionListener {
     private Connections connections;
     private ChatRepository chatRepository;
     private Main main;
-    private User user;
 
-    public TcpListener(Main main, User user) {
-        this.user = user;
+    public TcpListener(Main main) {
         this.main = main;
         connections = new Connections();
         chatRepository = new ChatRepositoryInMemory();
@@ -33,7 +30,7 @@ public class TcpListener implements TCPConnectionListener {
     }
 
     @Override
-    public void onConnected(TCPConnection tcpConnection, String fromTo) {
+    public void onConnected(TCPConnection tcpConnection, String login) {
         Main.isFriendConnected = true;
     }
 
@@ -54,9 +51,9 @@ public class TcpListener implements TCPConnectionListener {
     }
 
     @Override
-    public void onDisconnect(TCPConnection tcpConnection, String fromTo) {
+    public void onDisconnect(TCPConnection tcpConnection, String login) {
         tcpConnection.disconnect();
-        connections.removeAll();
+        connections.remove();
         Main.isFriendConnected = false;
     }
 
@@ -64,21 +61,18 @@ public class TcpListener implements TCPConnectionListener {
     public void onException(TCPConnection tcpConnection, Exception e) {
         logger.log(Level.WARNING, "Exception");
         tcpConnection.disconnect();
-        connections.removeAll();
+        connections.remove();
         Main.isFriendConnected = false;
         Main.isServerConnected = false;
     }
 
     private void createConnections() {
-        chatRepository.getAllChatsByUserLogin(user.getUserLogin()).forEach(chat -> {
-            try {
-                connections.addIfNotExists(chat.getOwnerUser().getUserLogin(), chat.getFriendUser().getUserLogin(), this);
-            } catch (ConnectException e) {
-                Main.isServerConnected = false;
-                /*logger.log(Level.WARNING, "Error while connecting");*/
-            } catch (IOException e) {
-                logger.log(Level.WARNING, "Error");
-            }
-        });
+        try {
+            connections.addIfNotExists(this);
+        } catch (ConnectException e) {
+            Main.isServerConnected = false;
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Error");
+        }
     }
 }
