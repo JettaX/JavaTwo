@@ -13,25 +13,27 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import lombok.Getter;
 import rocket_chat.entity.Chat;
 import rocket_chat.entity.Message;
-import rocket_chat.network.TCPConnection;
-import rocket_chat.network.TCPConnectionListener;
 import rocket_chat.repository.ChatRepository;
 import rocket_chat.repository.ChatRepositoryInMemory;
 import rocket_chat.repository.Connections;
 import rocket_chat.validation.Validator;
+import rocket_chat.view.LabelMessageNotSent;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ChatController implements TCPConnectionListener {
+public class ChatController {
+    private Main main;
     private ChatRepository chatRepository;
     private Validator validator;
+    @Getter
     private Chat chat;
     private Logger logger = Logger.getLogger(ChatController.class.getName());
-    private TCPConnection connection;
     private Connections connections;
 
     @FXML
@@ -45,20 +47,12 @@ public class ChatController implements TCPConnectionListener {
     @FXML
     public HBox titleWrapper;
 
-    public void initialize() {
-        chatRepository = new ChatRepositoryInMemory();
-        validator = new Validator();
-        connections = new Connections();
-    }
-
-    public void initializer(Chat chat) {
+    public void initializer(Chat chat, Main main) {
+        this.main = main;
         this.chat = chat;
-        try {
-            connections.addIfNotExists(chat.getOwnerUser().getUserLogin(), chat.getFriendUser().getUserLogin(), this);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        connection = connections.get(chat.getOwnerUser().getUserLogin(), chat.getFriendUser().getUserLogin());
+        connections = new Connections();
+        validator = new Validator();
+        chatRepository = new ChatRepositoryInMemory();
         addMessages();
         generateTitle();
     }
@@ -67,7 +61,7 @@ public class ChatController implements TCPConnectionListener {
         Button backButton = new Button("Back");
         backButton.setOnAction(event -> {
             try {
-                Main.showChats(Main.user);
+                main.showChats(Main.user);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -88,8 +82,20 @@ public class ChatController implements TCPConnectionListener {
             return;
         }
 
-        addMessage(new Message(chat.getOwnerUser().getUserLogin(), chat.getFriendUser().getUserLogin(),
-                inputField.getText()));
+        Message message = new Message(chat.getOwnerUser().getUserLogin(), chat.getFriendUser().getUserLogin(),
+                inputField.getText());
+
+        try {
+            connections.get(message.getUserNameFrom(), message.getUserNameTo()).sendMessage(new ObjectMapper()
+                    .writeValueAsString(message));
+        } catch (JsonProcessingException e) {
+            logger.log(Level.WARNING, "Cant parse message");
+        } catch (NullPointerException e) {
+            logger.log(Level.SEVERE, "Connection not found");
+        }
+
+        addMessage(message, true);
+
         inputField.clear();
         inputField.requestFocus();
     }
@@ -101,29 +107,42 @@ public class ChatController implements TCPConnectionListener {
         }
     }
 
-    public void addMessage(Message message) {
+    public void addMessage(Message message, boolean isOwner) {
         if (chat.getMessages().isEmpty()) {
-            chatRepository.saveChat(chat);
+            AtomicBoolean isSave = new AtomicBoolean(true);
+            chatRepository.getAllChatsByUserLogin(chat.getOwnerUser().getUserLogin()).forEach(chatik -> {
+                if (chat.equals(chatik)) {
+                    isSave.set(false);
+                }
+            });
+            if (isSave.get()) {
+                chatRepository.saveChat(chat);
+            }
         }
         chatRepository.addMessage(message);
-        try {
-            connection.sendMessage(new ObjectMapper()
-                    .writeValueAsString(message));
-        } catch (JsonProcessingException e) {
-            logger.log(Level.WARNING, "Cant parse message ", e);
-        } catch (NullPointerException e) {
-            logger.log(Level.SEVERE, "Connection not found ", e);
-        }
 
         HBox messageWrapper = new HBox();
         messageWrapper.getStyleClass().add("messageWrapper");
 
         Label labelMessage =
                 new Label(message.getText() + "     " + message.getTime().getHour() + ":" + message.getTime().getMinute());
-        labelMessage.getStyleClass().add("messageLabelOwner");
         labelMessage.setWrapText(true);
+        LabelMessageNotSent labelMessageNotSent = null;
+        if (isOwner) {
+            labelMessage.getStyleClass().add("messageLabelOwner");
+            if (!Main.isServerConnected) {
+                labelMessageNotSent = new LabelMessageNotSent();
+                messageWrapper.setAlignment(Pos.CENTER_LEFT);
+            }
+            messageWrapper.setAlignment(Pos.CENTER_RIGHT);
+        } else {
+            labelMessage.getStyleClass().add("messageLabelFriend");
+            messageWrapper.setAlignment(Pos.CENTER_LEFT);
+        }
+        if (labelMessageNotSent != null) {
+            messageWrapper.getChildren().add(labelMessageNotSent);
+        }
 
-        messageWrapper.setAlignment(Pos.CENTER_RIGHT);
         messageWrapper.getChildren().add(labelMessage);
         messagesWrapper.getChildren().add(messageWrapper);
 
@@ -147,43 +166,16 @@ public class ChatController implements TCPConnectionListener {
             messageWrapper.getChildren().add(label);
             messagesWrapper.getChildren().add(messageWrapper);
         }
-        scrollPaneForMessages.setVvalue(scrollPaneForMessages.getVmax());
+        scrollPaneForMessages.setVvalue(Double.MAX_VALUE);
     }
 
     public void mouseListener(MouseEvent mouseEvent) {
         if (mouseEvent.getButton().equals(MouseButton.BACK)) {
             try {
-                Main.showChats(Main.user);
+                main.showChats(Main.user);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-    }
-
-    @Override
-    public void onConnected(TCPConnection tcpConnection, String fromTo) {
-
-    }
-
-    @Override
-    public void onReceiveMessage(TCPConnection tcpConnection, String message) {
-        Message mess = null;
-        try {
-            mess = new ObjectMapper().readerFor(Message.class).readValue(message);
-        } catch (JsonProcessingException e) {
-            logger.log(Level.WARNING, "Error while parsing message", e);
-        }
-        chat.addMessage(mess);
-        addMessage(mess);
-    }
-
-    @Override
-    public void onDisconnect(TCPConnection tcpConnection, String fromTo) {
-
-    }
-
-    @Override
-    public void onException(TCPConnection tcpConnection, Exception e) {
-
     }
 }

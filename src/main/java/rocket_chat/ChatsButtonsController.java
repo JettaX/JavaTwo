@@ -3,6 +3,7 @@ package rocket_chat;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -21,6 +22,8 @@ import java.util.List;
 import java.util.Locale;
 
 public class ChatsButtonsController {
+    public ScrollPane scrollPaneForChats;
+    private Main main;
     private Validator validator = new Validator();
     private ChatRepository chatRepository;
     private UserRepository userRepository;
@@ -32,7 +35,8 @@ public class ChatsButtonsController {
     @FXML
     public TextField searchInput;
 
-    public void initialize() {
+    public void initializer(Main main) {
+        this.main = main;
         chatRepository = new ChatRepositoryInMemory();
         userRepository = new UserRepositoryInMemory();
         addChats();
@@ -49,22 +53,27 @@ public class ChatsButtonsController {
     }
 
     private void addChats() {
-        User ownerUser = Main.user;
-        List<Chat> chats = chatRepository.getAllChatsByUserLogin(ownerUser.getUserLogin());
-        for (Chat chat : chats) {
-            HBox hBox = new HBox();
-            Button chatButton = new ChatsButton(chat);
-            HBox.setHgrow(chatButton, javafx.scene.layout.Priority.ALWAYS);
-            chatButton.getStyleClass().add("chatButtonWithFriend");
-            chatButton.setOnAction(event -> {
-                try {
-                    Main.showChat(chat);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            hBox.getChildren().add(chatButton);
-            chatsWrapper.getChildren().add(hBox);
+        try {
+            User ownerUser = Main.user;
+            List<Chat> chats = chatRepository.getAllChatsByUserLogin(ownerUser.getUserLogin());
+            for (Chat chat : chats) {
+                HBox hBox = new HBox();
+                Button chatButton = new ChatsButton(chat);
+                HBox.setHgrow(chatButton, javafx.scene.layout.Priority.ALWAYS);
+                chatButton.getStyleClass().add("chatButtonWithFriend");
+                chatButton.setOnAction(event -> {
+                    try {
+                        main.showChat(chat);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                hBox.getChildren().add(chatButton);
+                chatsWrapper.getChildren().add(hBox);
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -96,7 +105,7 @@ public class ChatsButtonsController {
         HBox.setHgrow(chatButton, javafx.scene.layout.Priority.ALWAYS);
         chatButton.setOnAction(event -> {
             try {
-                Main.showChat(new Chat(Main.user, user));
+                main.showChat(new Chat(Main.user, user));
                 isLoadSearch = true;
             } catch (IOException e) {
                 e.printStackTrace();

@@ -21,6 +21,11 @@
 
 #messagesWrapper {
     -fx-spacing: 5px;
+    -fx-padding: 5 5 5 5;
+}
+
+.messageWrapper {
+    -fx-spacing: 5px;
 }
 
 #sendButton {
@@ -52,4 +57,10 @@
 
 .messageLabelOwner {
     -fx-background-color: rgb(171, 51, 52);
+}
+
+.label-message-not-sent {
+    -fx-background-color: RED;
+    -fx-padding: 5 10 5 10;
+    -fx-background-radius: 50;
 }

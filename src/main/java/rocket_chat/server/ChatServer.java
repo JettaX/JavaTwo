@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,8 +18,10 @@ public class ChatServer implements TCPConnectionListener {
     public static void main(String[] args) {
         new ChatServer();
     }
+
     private final Logger logger = Logger.getLogger(ChatServer.class.getName());
     private Map<String, TCPConnection> connections;
+    private Map<String, Queue<String>> queues = new HashMap<>();
 
     private ChatServer() {
         logger.log(java.util.logging.Level.INFO, "Starting server...");
@@ -39,6 +42,7 @@ public class ChatServer implements TCPConnectionListener {
     @Override
     public synchronized void onConnected(TCPConnection tcpConnection, String fromTo) {
         connections.put(fromTo, tcpConnection);
+        checkQueues(fromTo);
         logger.log(java.util.logging.Level.INFO, "Client connected");
     }
 
@@ -55,21 +59,49 @@ public class ChatServer implements TCPConnectionListener {
 
     @Override
     public synchronized void onException(TCPConnection tcpConnection, Exception e) {
-        logger.log(java.util.logging.Level.SEVERE, "Error: " + e.getMessage());
+        logger.log(java.util.logging.Level.SEVERE, "Error:");
     }
 
     private void sendMessage(String message) {
+        Message mess = parseMessage(message);
+
+        String connectionId = mess.getUserNameTo().concat(":").concat(mess.getUserNameFrom());
+
+        if (connections.containsKey(connectionId)) {
+            connections.get(connectionId).sendMessage(message);
+        } else {
+            addMessageInQueue(message, mess);
+        }
+    }
+
+    private void addMessageInQueue(String gsonMessage, Message message) {
+        String connectionId = message.getUserNameTo().concat(":").concat(message.getUserNameFrom());
+        if (queues.containsKey(connectionId)) {
+            Queue<String> queue = queues.get(connectionId);
+            queue.add(gsonMessage);
+        } else {
+            Queue<String> queue = new java.util.LinkedList<>();
+            queue.add(gsonMessage);
+            queues.put(connectionId, queue);
+        }
+    }
+
+    private void checkQueues(String fromTo) {
+        if (queues.containsKey(fromTo)) {
+            Queue<String> queue = queues.get(fromTo);
+            while (!queue.isEmpty()) {
+                connections.get(fromTo).sendMessage(queue.poll());
+            }
+        }
+    }
+
+    private Message parseMessage(String message) {
         Message mess = null;
         try {
             mess = new ObjectMapper().readerFor(Message.class).readValue(message);
         } catch (JsonProcessingException e) {
             logger.log(Level.WARNING, "Error while parsing message", e);
         }
-
-        for (Map.Entry<String, TCPConnection> connection : connections.entrySet()) {
-            if (connection.getKey().equals(mess.getUserNameTo().concat(":").concat(mess.getUserNameFrom()))) {
-                connection.getValue().sendMessage(message);
-            }
-        }
+        return mess;
     }
 }

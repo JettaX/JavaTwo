@@ -1,5 +1,6 @@
 package rocket_chat.repository;
 
+import rocket_chat.Main;
 import rocket_chat.network.TCPConnection;
 import rocket_chat.network.TCPConnectionListener;
 
@@ -14,8 +15,8 @@ public class Connections {
         if (!connections.containsKey(from.concat(":").concat(to))) {
             TCPConnection connection = new TCPConnection(listener, "localhost", 8188);
             connection.setFromTo(from.concat(":").concat(to));
-            System.out.println(connection);
             connections.put(from.concat(":").concat(to), connection);
+            Main.isServerConnected = true;
         }
     }
 
@@ -23,7 +24,20 @@ public class Connections {
         return connections.get(from.concat(":").concat(to));
     }
 
-    public void remove(String from, String to) {
-        connections.remove(from.concat(":").concat(to));
+    public void remove(String fromTo) {
+        String[] strings = fromTo.split(":");
+        connections.remove(strings[1].concat(":").concat(strings[0]));
+    }
+
+    public void removeAll() {
+        connections.clear();
+    }
+
+    public int getSize() {
+        return connections.size();
+    }
+
+    public Map<String, TCPConnection> getConnections() {
+        return connections;
     }
 }

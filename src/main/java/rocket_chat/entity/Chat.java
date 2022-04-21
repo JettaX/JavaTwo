@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @JsonPropertyOrder({"ownerUser", "friendUser", "messages"})
 @AllArgsConstructor
@@ -28,5 +29,18 @@ public class Chat {
 
     public void addMessage(Message message) {
         messages.add(message);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Chat chat = (Chat) o;
+        return ownerUser.equals(chat.ownerUser) && friendUser.equals(chat.friendUser);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ownerUser, friendUser);
     }
 }

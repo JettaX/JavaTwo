@@ -13,53 +13,68 @@ import rocket_chat.repository.*;
 import java.io.IOException;
 
 public class Main extends Application {
+    //TODO Не до конца происходит прокрутка сообщений при отправки или получении сообщений
     public static User user;
-    static private Stage stage;
+    private Stage stage;
+    public ChatController chatController;
+    public static boolean isFriendConnected = false;
+    public static boolean isServerConnected = false;
+    private Thread thread;
 
     @Override
     public void start(Stage stage) throws IOException {
-        Main.stage = stage;
+        initializerData();
+        this.stage = stage;
         FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("login.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 400, 600);
+        LoginController loginController = fxmlLoader.getController();
+        loginController.setMain(this);
         stage.setResizable(true);
         stage.setTitle("RocketChat");
         stage.setScene(scene);
         stage.show();
+        thread = connectionCheckerThread();
+        thread.start();
     }
 
-
     public static void main(String[] args) {
-        initializerData();
         launch();
     }
 
-    public static void showChat(Chat chat) throws IOException {
+    public void showChat(Chat chat) throws IOException {
         stage.close();
         FXMLLoader fxmlLoader = createStage("chat.fxml");
         ChatController chatController = fxmlLoader.getController();
-        chatController.initializer(chat);
+        this.chatController = chatController;
+        chatController.initializer(chat, this);
     }
 
-    public static void showChats(User user) throws IOException {
-        Main.user = user;
+    public void showChats(User user) throws IOException {
+        this.user = user;
         stage.close();
-        createStage("chats.fxml");
-
+        FXMLLoader fxmlLoader = createStage("chats.fxml");
+        ChatsButtonsController chatsButtonsController = fxmlLoader.getController();
+        chatsButtonsController.initializer(this);
+        nullingLink();
     }
 
-    public static void showError(String message) throws IOException {
+    public void showError(String message) throws IOException {
         FXMLLoader fxmlLoader = createStage("error.fxml");
         ErrorController errorController = fxmlLoader.getController();
         errorController.setErrorMessage(message);
+        errorController.setMain(this);
+        nullingLink();
     }
 
-    public static void showLogin() throws IOException {
+    public void showLogin() throws IOException {
         stage.close();
-        createStage("login.fxml");
-
+        FXMLLoader fxmlLoader = createStage("login.fxml");
+        LoginController loginController = fxmlLoader.getController();
+        loginController.setMain(this);
+        nullingLink();
     }
 
-    private static FXMLLoader createStage(String fxml) throws IOException {
+    private FXMLLoader createStage(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource(fxml));
         Scene scene = new Scene(fxmlLoader.load(), stage.getWidth() - 16, stage.getHeight() - 39);
         double x = stage.getX();
@@ -69,6 +84,31 @@ public class Main extends Application {
         stage.setY(y);
         stage.show();
         return fxmlLoader;
+    }
+
+    private void nullingLink() {
+        chatController = null;
+    }
+
+    private void createConnection() throws InterruptedException {
+        if (!isServerConnected && user != null) {
+            new TcpListener(this, user);
+        } else {
+            Thread.sleep(5000);
+        }
+    }
+
+    private Thread connectionCheckerThread() {
+        return new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                    createConnection();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     private static void initializerData() {

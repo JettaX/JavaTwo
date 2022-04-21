@@ -13,8 +13,13 @@ import java.util.Objects;
 public class ChatsButton extends Button {
 
     public ChatsButton(Chat chat) {
-        super(chat.getFriendUser().getName() + " " + chat.getFriendUser().getSurname() + "\n" +
-                chat.getMessages().get(chat.getMessages().size() - 1).getText());
+        if (!chat.getMessages().isEmpty()) {
+            this.setText((chat.getFriendUser().getName() + " " + chat.getFriendUser().getSurname() + "\n" +
+                    chat.getMessages().get(chat.getMessages().size() - 1).getText()));
+        } else {
+            this.setText((chat.getFriendUser().getName() + " " + chat.getFriendUser().getSurname()
+                    + "\n @" + chat.getOwnerUser().getUserLogin()));
+        }
         initializer(chat.getFriendUser());
     }
 

@@ -16,5 +16,8 @@
 		<TextField fx:id="searchInput" onKeyPressed="#searchKeyListener" HBox.hgrow="ALWAYS"
 		           promptText="search"/>
 	</HBox>
-	<VBox fx:id="chatsWrapper" HBox.hgrow="ALWAYS" alignment="BASELINE_CENTER"/>
+	<ScrollPane fx:id="scrollPaneForChats" cache="true" cacheHint="SPEED" fitToWidth="true" HBox.hgrow="ALWAYS"
+	            VBox.vgrow="ALWAYS">
+		<VBox fx:id="chatsWrapper" HBox.hgrow="ALWAYS" alignment="BASELINE_CENTER"/>
+	</ScrollPane>
 </VBox>

@@ -2,12 +2,12 @@ package rocket_chat.repository;
 
 import rocket_chat.entity.User;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class UserRepositoryInMemory implements UserRepository {
 
-    public static List<User> list = new ArrayList<>();
+    public static List<User> list = new CopyOnWriteArrayList<>();
 
     public void saveUser(User user) {
         list.add(user);

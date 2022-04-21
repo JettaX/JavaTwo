@@ -1,18 +1,19 @@
 package rocket_chat.network;
 
-import lombok.SneakyThrows;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import rocket_chat.entity.Message;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class TCPConnection {
-
     private final Socket socket;
     private final Thread thread;
     private final TCPConnectionListener eventListener;
-    private final BufferedReader in;
-    private final BufferedWriter out;
+    private BufferedReader in;
+    private BufferedWriter out;
 
     public TCPConnection(TCPConnectionListener eventListener, String ip, int port) throws IOException {
         this(new Socket(ip, port), eventListener);
@@ -26,17 +27,30 @@ public class TCPConnection {
         thread = new Thread(new Runnable() {
             @Override
             public void run() {
+                int counter = 0;
                 String fromTo = "";
+                String message = "";
                 try {
-                    do {
-                        fromTo = in.readLine();
-                        if (!fromTo.isBlank()) {
-                            break;
+                    fromTo = in.readLine();
+                    if (fromTo.startsWith("{")) {
+                        message = fromTo;
+                        try {
+                            Message messageObj = new ObjectMapper().readerFor(Message.class).readValue(message);
+                            fromTo = messageObj.getUserNameFrom().concat(":").concat(messageObj.getUserNameTo());
+                        } catch (JsonProcessingException e) {
+                            eventListener.onException(TCPConnection.this, e);
                         }
-                    } while (true);
+                    }
                     eventListener.onConnected(TCPConnection.this, fromTo);
                     while (!thread.isInterrupted()) {
-                        eventListener.onReceiveMessage(TCPConnection.this, in.readLine());
+                        String line = "";
+                        if (counter == 0 && !message.isBlank()) {
+                            line = message;
+                            counter++;
+                        } else {
+                            line = in.readLine();
+                        }
+                        eventListener.onReceiveMessage(TCPConnection.this, line);
                     }
                 } catch (IOException e) {
                     eventListener.onException(TCPConnection.this, e);
@@ -68,7 +82,6 @@ public class TCPConnection {
         }
     }
 
-    @SneakyThrows
     public synchronized void disconnect() {
         thread.interrupt();
         try {

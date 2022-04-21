@@ -5,9 +5,10 @@ import rocket_chat.entity.Message;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ChatRepositoryInMemory implements ChatRepository {
-    public static ArrayList<Chat> chatList = new ArrayList<>();
+    public static List<Chat> chatList = new CopyOnWriteArrayList<>();
 
 
     public void saveChat(Chat chat) {
