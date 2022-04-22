@@ -1,22 +1,21 @@
 package rocket_chat;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import rocket_chat.entity.Chat;
 import rocket_chat.entity.Message;
 import rocket_chat.entity.User;
-import rocket_chat.entity.UserSecure;
 import rocket_chat.repository.*;
 
 import java.io.IOException;
 
 public class Main extends Application {
-    //TODO Не до конца происходит прокрутка сообщений при отправки или получении сообщений
     public static User user;
-    private Stage stage;
-    public ChatController chatController;
+    private static Stage stage;
+    public static ChatController chatController;
     public static boolean isFriendConnected = false;
     public static boolean isServerConnected = false;
     private Thread thread;
@@ -25,56 +24,50 @@ public class Main extends Application {
     public void start(Stage stage) throws IOException {
         initializerData();
         this.stage = stage;
-        FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("login.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 400, 600);
-        LoginController loginController = fxmlLoader.getController();
-        loginController.setMain(this);
         stage.setResizable(true);
         stage.setTitle("RocketChat");
-        stage.setScene(scene);
-        stage.show();
+        stage.setWidth(400);
+        stage.setHeight(600);
         thread = connectionCheckerThread();
         thread.start();
+        showLogin();
     }
 
     public static void main(String[] args) {
         launch();
     }
 
-    public void showChat(Chat chat) throws IOException {
+    public static void showChat(Chat chat) throws IOException {
         stage.close();
         FXMLLoader fxmlLoader = createStage("chat.fxml");
         ChatController chatController = fxmlLoader.getController();
-        this.chatController = chatController;
-        chatController.initializer(chat, this);
+        Main.chatController = chatController;
+        chatController.initializer(chat);
     }
 
-    public void showChats(User user) throws IOException {
-        this.user = user;
+    public static void showChats(User user) throws IOException {
+        Main.user = user;
         stage.close();
         FXMLLoader fxmlLoader = createStage("chats.fxml");
         ChatsButtonsController chatsButtonsController = fxmlLoader.getController();
-        chatsButtonsController.initializer(this);
+        chatsButtonsController.initializer();
         nullingLink();
     }
 
-    public void showError(String message) throws IOException {
+    public static void showError(String message) throws IOException {
         FXMLLoader fxmlLoader = createStage("error.fxml");
         ErrorController errorController = fxmlLoader.getController();
         errorController.setErrorMessage(message);
-        errorController.setMain(this);
         nullingLink();
     }
 
-    public void showLogin() throws IOException {
+    public static void showLogin() throws IOException {
         stage.close();
-        FXMLLoader fxmlLoader = createStage("login.fxml");
-        LoginController loginController = fxmlLoader.getController();
-        loginController.setMain(this);
+        createStage("login.fxml");
         nullingLink();
     }
 
-    private FXMLLoader createStage(String fxml) throws IOException {
+    private static FXMLLoader createStage(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource(fxml));
         Scene scene = new Scene(fxmlLoader.load(), stage.getWidth() - 16, stage.getHeight() - 39);
         double x = stage.getX();
@@ -86,14 +79,23 @@ public class Main extends Application {
         return fxmlLoader;
     }
 
-    private void nullingLink() {
+    private static void nullingLink() {
         chatController = null;
     }
 
     private void createConnection() throws InterruptedException {
+        if (!isServerConnected && user == null) {
+            new TcpListener();
+        }
         if (!isServerConnected && user != null) {
-            new TcpListener(this);
-        } else {
+            user = null;
+            Platform.runLater(() -> {
+                try {
+                    showLogin();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
             Thread.sleep(5000);
         }
     }
@@ -111,7 +113,7 @@ public class Main extends Application {
         });
     }
 
-    private static void initializerData() {
+    private void initializerData() {
         ChatRepository chatRepository = new ChatRepositoryInMemory();
         UserRepository userRepository = new UserRepositoryInMemory();
         UserSecureRepository userSecureRepository = new UserSecureRepositoryInMemory();
@@ -127,22 +129,6 @@ public class Main extends Application {
         userOne.setImagePath("/images/iconsForUsers/1.jpg");
         userTwo.setImagePath("/images/iconsForUsers/2.jpg");
         userThree.setImagePath("/images/iconsForUsers/3.jpg");
-
-        UserSecure userOneSecure = new UserSecure(userOne.getUserLogin(), "1234");
-        UserSecure userTwoSecure = new UserSecure(userTwo.getUserLogin(), "1234");
-        UserSecure userThreeSecure = new UserSecure(userThree.getUserLogin(), "1234");
-        UserSecure mainUserSecure = new UserSecure(mainUser.getUserLogin(), "1234");
-        UserSecure userFourSecure = new UserSecure(userFour.getUserLogin(), "1234");
-        UserSecure userFiveSecure = new UserSecure(userFive.getUserLogin(), "1234");
-        UserSecure userSixSecure = new UserSecure(userSix.getUserLogin(), "1234");
-
-        userSecureRepository.createUserSecure(userOneSecure);
-        userSecureRepository.createUserSecure(userTwoSecure);
-        userSecureRepository.createUserSecure(userThreeSecure);
-        userSecureRepository.createUserSecure(userFourSecure);
-        userSecureRepository.createUserSecure(userFiveSecure);
-        userSecureRepository.createUserSecure(userSixSecure);
-        userSecureRepository.createUserSecure(mainUserSecure);
 
         Chat chatWithOne = new Chat(mainUser, userOne);
         Chat chatWithTwo = new Chat(mainUser, userTwo);

@@ -3,20 +3,15 @@ package rocket_chat;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
-import lombok.Setter;
-import rocket_chat.repository.UserRepository;
-import rocket_chat.repository.UserRepositoryInMemory;
-import rocket_chat.repository.UserSecureRepository;
-import rocket_chat.repository.UserSecureRepositoryInMemory;
-import rocket_chat.validation.Validator;
+import rocket_chat.repository.*;
 
-import java.io.IOException;
+import java.util.logging.Logger;
 
 public class LoginController {
-    @Setter
-    private Main main;
+    private Logger logger = Logger.getLogger(LoginController.class.getName());
     private UserRepository userRepository;
     private UserSecureRepository userSecureRepository;
+    private Connection connection;
     @FXML
     public Button loginButton;
     @FXML
@@ -27,23 +22,16 @@ public class LoginController {
     public void initialize() {
         userSecureRepository = new UserSecureRepositoryInMemory();
         userRepository = new UserRepositoryInMemory();
+        connection = new Connection();
     }
 
     public void loginButtonAction() {
         String login = inputLogin.getText();
         String password = inputPassword.getText();
-        if (new Validator().isValid(login) && userSecureRepository.checkAuth(login, password)) {
-            try {
-                main.showChats(userRepository.getUserByUserLogin(login));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                main.showError("username or password is incorrect");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        try {
+            connection.get().sendLogin(login, password);
+        } catch (NullPointerException e) {
+            logger.info("Server is not connected");
         }
     }
 }

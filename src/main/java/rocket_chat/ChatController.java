@@ -18,7 +18,7 @@ import rocket_chat.entity.Chat;
 import rocket_chat.entity.Message;
 import rocket_chat.repository.ChatRepository;
 import rocket_chat.repository.ChatRepositoryInMemory;
-import rocket_chat.repository.Connections;
+import rocket_chat.repository.Connection;
 import rocket_chat.validation.Validator;
 import rocket_chat.view.LabelMessageNotSent;
 
@@ -28,13 +28,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ChatController {
-    private Main main;
     private ChatRepository chatRepository;
     private Validator validator;
     @Getter
     private Chat chat;
     private Logger logger = Logger.getLogger(ChatController.class.getName());
-    private Connections connections;
+    private Connection connection;
 
     @FXML
     public ScrollPane scrollPaneForMessages;
@@ -47,10 +46,9 @@ public class ChatController {
     @FXML
     public HBox titleWrapper;
 
-    public void initializer(Chat chat, Main main) {
-        this.main = main;
+    public void initializer(Chat chat) {
         this.chat = chat;
-        connections = new Connections();
+        connection = new Connection();
         validator = new Validator();
         chatRepository = new ChatRepositoryInMemory();
         addMessages();
@@ -61,7 +59,7 @@ public class ChatController {
         Button backButton = new Button("Back");
         backButton.setOnAction(event -> {
             try {
-                main.showChats(Main.user);
+                Main.showChats(Main.user);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -86,7 +84,7 @@ public class ChatController {
                 inputField.getText());
 
         try {
-            connections.get().sendMessage(new ObjectMapper()
+            connection.get().sendMessage(new ObjectMapper()
                     .writeValueAsString(message));
         } catch (JsonProcessingException e) {
             logger.log(Level.WARNING, "Cant parse message");
@@ -172,7 +170,7 @@ public class ChatController {
     public void mouseListener(MouseEvent mouseEvent) {
         if (mouseEvent.getButton().equals(MouseButton.BACK)) {
             try {
-                main.showChats(Main.user);
+                Main.showChats(Main.user);
             } catch (IOException e) {
                 e.printStackTrace();
             }

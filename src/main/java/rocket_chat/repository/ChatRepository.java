@@ -15,4 +15,6 @@ public interface ChatRepository {
     public void addMessage(Message message);
 
     public boolean deleteChatByUserIdAndFriendId(String ownerUserName, String friendUserName);
+
+    public boolean chatExists(String ownerUserName, String friendUserName);
 }

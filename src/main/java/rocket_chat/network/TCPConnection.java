@@ -11,14 +11,17 @@ public class TCPConnection {
     private BufferedReader in;
     private BufferedWriter out;
 
-    public TCPConnection(TCPConnectionListener eventListener, String ip, int port, String login) throws IOException {
+    public TCPConnection(TCPConnectionListener eventListener, String ip, int port) throws IOException {
         this.socket = new Socket(ip, port);
         this.eventListener = eventListener;
         initializer(socket);
         thread = new Thread(new Runnable() {
             @Override
             public void run() {
+                String login = "";
                 try {
+                    login = in.readLine();
+                    eventListener.onAuthSuccess(TCPConnection.this, login);
                     eventListener.onConnected(TCPConnection.this, login);
                     while (!thread.isInterrupted()) {
                         eventListener.onReceiveMessage(TCPConnection.this, in.readLine());
@@ -40,10 +43,25 @@ public class TCPConnection {
         thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                String line = null;
+                String login = null;
+                int countError = 0;
                 try {
-                    line = in.readLine();
-                    eventListener.onConnected(TCPConnection.this, line);
+                    while (!thread.isInterrupted()) {
+                        try {
+                            login = in.readLine();
+                            eventListener.onAttemptAuth(TCPConnection.this, login);
+                        } catch (IOException e) {
+                            if (countError++ > 2) {
+                                disconnect();
+                            }
+                            eventListener.onAuthFailed(TCPConnection.this, e);
+                            continue;
+                        }
+                        login = login.split(":")[0];
+                        eventListener.onAuthSuccess(TCPConnection.this, login);
+                        break;
+                    }
+                    eventListener.onConnected(TCPConnection.this, login);
                     while (!thread.isInterrupted()) {
                         eventListener.onReceiveMessage(TCPConnection.this, in.readLine());
                     }
@@ -51,7 +69,7 @@ public class TCPConnection {
                         IOException e) {
                     eventListener.onException(TCPConnection.this, e);
                 } finally {
-                    eventListener.onDisconnect(TCPConnection.this, line);
+                    eventListener.onDisconnect(TCPConnection.this, login);
                 }
             }
         });
@@ -62,20 +80,21 @@ public class TCPConnection {
         in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
     }
-
     public synchronized void sendMessage(String message) {
-        try {
-            out.write(message + "\r\n");
-            out.flush();
-        } catch (IOException e) {
-            eventListener.onException(TCPConnection.this, e);
-            disconnect();
-        }
+        write(message);
     }
 
-    public synchronized void sendLogin(String login) {
+    public synchronized void sendLogin(String login, String password) {
+        write(login.concat(":").concat(password));
+    }
+
+    public synchronized void authSuccess(String login) {
+        write(login);
+    }
+
+    private synchronized void write(String message) {
         try {
-            out.write(login + "\r\n");
+            out.write(message + "\r\n");
             out.flush();
         } catch (IOException e) {
             eventListener.onException(TCPConnection.this, e);

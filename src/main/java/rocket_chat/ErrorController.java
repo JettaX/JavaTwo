@@ -4,14 +4,10 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import lombok.Setter;
 
 import java.io.IOException;
 
 public class ErrorController {
-    @Setter
-    private Main main;
-
     @FXML
     public Label errorLabel;
 
@@ -25,7 +21,7 @@ public class ErrorController {
     public void handleOkButton(ActionEvent event) {
         okButton.getScene().getWindow().hide();
         try {
-            main.showLogin();
+            Main.showLogin();
         } catch (IOException e) {
             e.printStackTrace();
         }

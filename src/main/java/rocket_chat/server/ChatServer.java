@@ -3,14 +3,15 @@ package rocket_chat.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import rocket_chat.entity.Message;
+import rocket_chat.entity.UserSecure;
 import rocket_chat.network.TCPConnection;
 import rocket_chat.network.TCPConnectionListener;
+import rocket_chat.repository.UserSecureRepository;
+import rocket_chat.repository.UserSecureRepositoryInMemory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,12 +21,19 @@ public class ChatServer implements TCPConnectionListener {
     }
 
     private final Logger logger = Logger.getLogger(ChatServer.class.getName());
+    private UserSecureRepository userSecureRepository;
     private Map<String, TCPConnection> connections;
-    private Map<String, Queue<String>> queues = new HashMap<>();
+    private Map<String, Queue<String>> queues;
+    private SortedSet<String> users;
 
     private ChatServer() {
+        users = new TreeSet<>();
+        userSecureRepository = new UserSecureRepositoryInMemory();
+        initializeData();
+        queues = new HashMap<>();
         logger.log(java.util.logging.Level.INFO, "Starting server...");
         connections = new HashMap<>();
+
         try (ServerSocket serverSocket = new ServerSocket(8188)) {
             while (true) {
                 try {
@@ -54,12 +62,35 @@ public class ChatServer implements TCPConnectionListener {
     @Override
     public synchronized void onDisconnect(TCPConnection tcpConnection, String login) {
         connections.remove(login);
+        users.remove(login);
         logger.log(java.util.logging.Level.INFO, "Client disconnected");
     }
 
     @Override
     public synchronized void onException(TCPConnection tcpConnection, Exception e) {
         logger.log(java.util.logging.Level.SEVERE, "Error:");
+    }
+
+    @Override
+    public void onAttemptAuth(TCPConnection tcpConnection, String loginPassword) throws IOException {
+        logger.log(java.util.logging.Level.INFO, "Attempt auth");
+        String login = loginPassword.split(":")[0].trim();
+        String password = loginPassword.split(":")[1].trim();
+        if (users.contains(login) || !userSecureRepository.checkAuth(login, password)) {
+            throw new IOException("Auth failed");
+        }
+    }
+
+    @Override
+    public void onAuthSuccess(TCPConnection tcpConnection, String login) {
+        logger.log(java.util.logging.Level.INFO, "Auth success");
+        users.add(login);
+        tcpConnection.authSuccess(login);
+    }
+
+    @Override
+    public void onAuthFailed(TCPConnection tcpConnection, Exception e) {
+        logger.log(java.util.logging.Level.INFO, "Auth failed");
     }
 
     private void sendMessage(String message) {
@@ -103,5 +134,24 @@ public class ChatServer implements TCPConnectionListener {
             logger.log(Level.WARNING, "Error while parsing message", e);
         }
         return mess;
+    }
+
+    private void initializeData() {
+
+        UserSecure userOneSecure = new UserSecure("admin", "1234");
+        UserSecure userTwoSecure = new UserSecure("lilyPit", "1234");
+        UserSecure userThreeSecure = new UserSecure("Karmenchik", "1234");
+        UserSecure mainUserSecure = new UserSecure("SteveApple", "1234");
+        UserSecure userFourSecure = new UserSecure("Jonson@Lol", "1234");
+        UserSecure userFiveSecure = new UserSecure("KittyClair", "1234");
+        UserSecure userSixSecure = new UserSecure("KekLol", "1234");
+
+        userSecureRepository.createUserSecure(userOneSecure);
+        userSecureRepository.createUserSecure(userTwoSecure);
+        userSecureRepository.createUserSecure(userThreeSecure);
+        userSecureRepository.createUserSecure(userFourSecure);
+        userSecureRepository.createUserSecure(userFiveSecure);
+        userSecureRepository.createUserSecure(userSixSecure);
+        userSecureRepository.createUserSecure(mainUserSecure);
     }
 }

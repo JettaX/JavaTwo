@@ -23,7 +23,6 @@ import java.util.Locale;
 
 public class ChatsButtonsController {
     public ScrollPane scrollPaneForChats;
-    private Main main;
     private Validator validator = new Validator();
     private ChatRepository chatRepository;
     private UserRepository userRepository;
@@ -35,8 +34,7 @@ public class ChatsButtonsController {
     @FXML
     public TextField searchInput;
 
-    public void initializer(Main main) {
-        this.main = main;
+    public void initializer() {
         chatRepository = new ChatRepositoryInMemory();
         userRepository = new UserRepositoryInMemory();
         addChats();
@@ -63,7 +61,7 @@ public class ChatsButtonsController {
                 chatButton.getStyleClass().add("chatButtonWithFriend");
                 chatButton.setOnAction(event -> {
                     try {
-                        main.showChat(chat);
+                        Main.showChat(chat);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -105,7 +103,7 @@ public class ChatsButtonsController {
         HBox.setHgrow(chatButton, javafx.scene.layout.Priority.ALWAYS);
         chatButton.setOnAction(event -> {
             try {
-                main.showChat(new Chat(Main.user, user));
+                Main.showChat(new Chat(Main.user, user));
                 isLoadSearch = true;
             } catch (IOException e) {
                 e.printStackTrace();

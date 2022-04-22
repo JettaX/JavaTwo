@@ -3,12 +3,11 @@ package rocket_chat;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
+import rocket_chat.entity.Chat;
 import rocket_chat.entity.Message;
 import rocket_chat.network.TCPConnection;
 import rocket_chat.network.TCPConnectionListener;
-import rocket_chat.repository.ChatRepository;
-import rocket_chat.repository.ChatRepositoryInMemory;
-import rocket_chat.repository.Connections;
+import rocket_chat.repository.*;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -18,14 +17,14 @@ import java.util.logging.Logger;
 
 public class TcpListener implements TCPConnectionListener {
     private Logger logger = Logger.getLogger(TcpListener.class.getName());
-    private Connections connections;
+    private Connection connection;
     private ChatRepository chatRepository;
-    private Main main;
+    private UserRepository userRepository;
 
-    public TcpListener(Main main) {
-        this.main = main;
-        connections = new Connections();
+    public TcpListener() {
+        connection = new Connection();
         chatRepository = new ChatRepositoryInMemory();
+        userRepository = new UserRepositoryInMemory();
         createConnections();
     }
 
@@ -42,10 +41,14 @@ public class TcpListener implements TCPConnectionListener {
         } catch (JsonProcessingException e) {
             logger.log(Level.WARNING, "Error while parsing message", e);
         }
-        if (main.chatController != null && main.chatController.getChat().getFriendUser().getUserLogin().equals(Objects.requireNonNull(mess).getUserNameFrom())) {
+        if (Main.chatController != null && Main.chatController.getChat().getFriendUser().getUserLogin().equals(Objects.requireNonNull(mess).getUserNameFrom())) {
             Message finalMess = mess;
-            Platform.runLater(() -> main.chatController.addMessage(finalMess, false));
+            Platform.runLater(() -> Main.chatController.addMessage(finalMess, false));
         } else {
+            if (!chatRepository.chatExists(mess.getUserNameTo(), mess.getUserNameFrom())) {
+                chatRepository.saveChat(new Chat(userRepository.getUserById(mess.getUserNameTo()),
+                        userRepository.getUserById(mess.getUserNameFrom())));
+            }
             chatRepository.addMessage(mess);
         }
     }
@@ -53,7 +56,7 @@ public class TcpListener implements TCPConnectionListener {
     @Override
     public void onDisconnect(TCPConnection tcpConnection, String login) {
         tcpConnection.disconnect();
-        connections.remove();
+        connection.remove();
         Main.isFriendConnected = false;
     }
 
@@ -61,14 +64,42 @@ public class TcpListener implements TCPConnectionListener {
     public void onException(TCPConnection tcpConnection, Exception e) {
         logger.log(Level.WARNING, "Exception");
         tcpConnection.disconnect();
-        connections.remove();
+        connection.remove();
         Main.isFriendConnected = false;
         Main.isServerConnected = false;
     }
 
+    @Override
+    public void onAttemptAuth(TCPConnection tcpConnection, String login) {
+
+    }
+
+    @Override
+    public void onAuthSuccess(TCPConnection tcpConnection, String login) {
+        Platform.runLater(() -> {
+            try {
+                Main.isServerConnected = true;
+                Main.showChats(userRepository.getUserByUserLogin(login));
+            } catch (IOException e) {
+                logger.log(Level.WARNING, "Error while getting user", e);
+            }
+        });
+    }
+
+    @Override
+    public void onAuthFailed(TCPConnection tcpConnection, Exception e) {
+        Platform.runLater(() -> {
+            try {
+                Main.showError("username or password is incorrect");
+            } catch (IOException ex) {
+                logger.log(Level.WARNING, "Error while showing error", ex);
+            }
+        });
+    }
+
     private void createConnections() {
         try {
-            connections.addIfNotExists(this);
+            connection.addIfNotExists(this);
         } catch (ConnectException e) {
             Main.isServerConnected = false;
         } catch (IOException e) {
