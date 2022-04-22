@@ -70,7 +70,7 @@ public class ChatServer implements TCPConnectionListener {
 
     @Override
     public synchronized void onException(TCPConnection tcpConnection, Exception e) {
-        logger.log(java.util.logging.Level.SEVERE, "Error:");
+        logger.log(java.util.logging.Level.SEVERE, e.getMessage());
     }
 
     @Override
@@ -87,12 +87,16 @@ public class ChatServer implements TCPConnectionListener {
     public void onAuthSuccess(TCPConnection tcpConnection, String login) {
         logger.log(java.util.logging.Level.INFO, "Auth success");
         users.add(login);
+        tcpConnection.authFailed("/auth_success");
         tcpConnection.authSuccess(login);
     }
 
     @Override
-    public void onAuthFailed(TCPConnection tcpConnection, Exception e) {
+    public void onAuthFailed(TCPConnection tcpConnection, String error) {
         logger.log(java.util.logging.Level.INFO, "Auth failed");
+        if (error != null) {
+            tcpConnection.authFailed(error);
+        }
     }
 
     private void sendMessage(String message) {

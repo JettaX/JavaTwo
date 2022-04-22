@@ -28,6 +28,9 @@ public class LoginController {
     public void loginButtonAction() {
         String login = inputLogin.getText();
         String password = inputPassword.getText();
+        if (login.isBlank() || password.isBlank()) {
+            return;
+        }
         try {
             connection.get().sendLogin(login, password);
         } catch (NullPointerException e) {

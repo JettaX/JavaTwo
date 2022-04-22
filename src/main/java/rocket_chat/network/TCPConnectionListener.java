@@ -9,5 +9,5 @@ public interface TCPConnectionListener {
     void onException(TCPConnection tcpConnection, Exception e);
     void onAttemptAuth(TCPConnection tcpConnection, String loginPassword) throws IOException;
     void onAuthSuccess(TCPConnection tcpConnection, String login);
-    void onAuthFailed(TCPConnection tcpConnection, Exception e);
+    void onAuthFailed(TCPConnection tcpConnection, String message);
 }

@@ -30,7 +30,6 @@ public class TcpListener implements TCPConnectionListener {
 
     @Override
     public void onConnected(TCPConnection tcpConnection, String login) {
-        Main.isFriendConnected = true;
     }
 
     @Override
@@ -57,7 +56,6 @@ public class TcpListener implements TCPConnectionListener {
     public void onDisconnect(TCPConnection tcpConnection, String login) {
         tcpConnection.disconnect();
         connection.remove();
-        Main.isFriendConnected = false;
     }
 
     @Override
@@ -65,7 +63,6 @@ public class TcpListener implements TCPConnectionListener {
         logger.log(Level.WARNING, "Exception");
         tcpConnection.disconnect();
         connection.remove();
-        Main.isFriendConnected = false;
         Main.isServerConnected = false;
     }
 
@@ -78,23 +75,30 @@ public class TcpListener implements TCPConnectionListener {
     public void onAuthSuccess(TCPConnection tcpConnection, String login) {
         Platform.runLater(() -> {
             try {
+                if (login == null) {
+                    throw new IOException("Login is null");
+                }
                 Main.isServerConnected = true;
                 Main.showChats(userRepository.getUserByUserLogin(login));
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Error while getting user", e);
+                logger.log(Level.WARNING, "Error while getting user");
             }
         });
     }
 
     @Override
-    public void onAuthFailed(TCPConnection tcpConnection, Exception e) {
-        Platform.runLater(() -> {
-            try {
-                Main.showError("username or password is incorrect");
-            } catch (IOException ex) {
-                logger.log(Level.WARNING, "Error while showing error", ex);
-            }
-        });
+    public void onAuthFailed(TCPConnection tcpConnection, String message) {
+        if (message != null && message.equals("/auth_failed")) {
+            showError("Username or password is incorrect");
+        }
+        if (message != null && message.equals("/attempts_over")) {
+            showError("Attempts are over");
+            Main.thread.interrupt();
+        }
+        if (message != null && message.equals("/timeout")) {
+            showError("Connection timeout");
+            Main.thread.interrupt();
+        }
     }
 
     private void createConnections() {
@@ -105,5 +109,15 @@ public class TcpListener implements TCPConnectionListener {
         } catch (IOException e) {
             logger.log(Level.WARNING, "Error");
         }
+    }
+
+    private void showError (String message) {
+        Platform.runLater(() -> {
+            try {
+                Main.showError(message);
+            } catch (IOException e) {
+                logger.log(Level.WARNING, e.getMessage());
+            }
+        });
     }
 }

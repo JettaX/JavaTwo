@@ -11,14 +11,17 @@ import rocket_chat.entity.User;
 import rocket_chat.repository.*;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Main extends Application {
+    private Logger logger = Logger.getLogger(Main.class.getName());
     public static User user;
     private static Stage stage;
     public static ChatController chatController;
     public static boolean isFriendConnected = false;
     public static boolean isServerConnected = false;
-    private Thread thread;
+    public static Thread thread;
 
     @Override
     public void start(Stage stage) throws IOException {
@@ -93,7 +96,7 @@ public class Main extends Application {
                 try {
                     showLogin();
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    logger.log(Level.WARNING, "Error while showing loginPage");
                 }
             });
             Thread.sleep(5000);
@@ -107,7 +110,8 @@ public class Main extends Application {
                     Thread.sleep(1000);
                     createConnection();
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    logger.log(Level.WARNING, "Connection checker thread interrupted");
+                    return;
                 }
             }
         });
