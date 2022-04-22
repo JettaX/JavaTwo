@@ -51,7 +51,7 @@ public class TCPConnection {
                             login = in.readLine();
                             eventListener.onAttemptAuth(TCPConnection.this, login);
                         } catch (IOException e) {
-                            if (countError++ > 2) {
+                            if (countError++ > 1) {
                                 disconnect();
                             }
                             eventListener.onAuthFailed(TCPConnection.this, e);
@@ -59,9 +59,9 @@ public class TCPConnection {
                         }
                         login = login.split(":")[0];
                         eventListener.onAuthSuccess(TCPConnection.this, login);
+                        eventListener.onConnected(TCPConnection.this, login);
                         break;
                     }
-                    eventListener.onConnected(TCPConnection.this, login);
                     while (!thread.isInterrupted()) {
                         eventListener.onReceiveMessage(TCPConnection.this, in.readLine());
                     }

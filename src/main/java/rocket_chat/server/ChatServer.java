@@ -61,8 +61,10 @@ public class ChatServer implements TCPConnectionListener {
 
     @Override
     public synchronized void onDisconnect(TCPConnection tcpConnection, String login) {
-        connections.remove(login);
-        users.remove(login);
+        if (login != null) {
+            connections.remove(login);
+            users.remove(login);
+        }
         logger.log(java.util.logging.Level.INFO, "Client disconnected");
     }
 
